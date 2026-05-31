@@ -1,0 +1,7 @@
+﻿<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128">
+  <!-- Outer Circle Border -->
+  <circle cx="64" cy="64" r="62" fill="none" stroke="#3E2723" stroke-width="2"/>
+  
+  <!-- Phi Symbol (Φ) in Gold -->
+  <text x="64" y="82" font-size="90" font-weight="bold" font-family="Georgia, serif" fill="#B8860B" text-anchor="middle" dominant-baseline="middle">Φ</text>
+</svg>

@@ -1,0 +1,54 @@
+@import "tailwindcss";
+
+@theme {
+  --color-forpus-bg: #FDFBF7;
+  --color-forpus-dark: #1A1A1A;
+  --color-forpus-brown: #3E2723;
+  --color-forpus-gold: #B8860B;
+
+  --font-serif: "Playfair Display", serif;
+  --font-sans: "Inter", sans-serif;
+}
+
+@layer base {
+  html {
+    scroll-behavior: smooth;
+  }
+
+  body {
+    @apply bg-forpus-bg text-forpus-dark font-sans antialiased selection:bg-forpus-gold/20 selection:text-forpus-dark;
+  }
+  
+  h1, h2, h3, h4, h5, h6 {
+    @apply font-serif font-bold text-forpus-brown;
+  }
+
+  /* Dark mode support via prefers-color-scheme */
+  @media (prefers-color-scheme: dark) {
+    body {
+      @apply bg-forpus-dark text-forpus-bg selection:bg-forpus-gold/30 selection:text-forpus-bg;
+    }
+    
+    h1, h2, h3, h4, h5, h6 {
+      @apply text-forpus-gold;
+    }
+  }
+}
+
+/* Custom scrollbar to keep it minimalistic */
+::-webkit-scrollbar {
+  width: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: #FDFBF7; 
+}
+ 
+::-webkit-scrollbar-thumb {
+  background: #3E2723; 
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #1A1A1A; 
+}
