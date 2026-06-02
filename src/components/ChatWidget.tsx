@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { MessageSquare, X, Send, ChevronRight } from 'lucide-react';
+import { MessageSquare, X, Send, ChevronRight, Copy } from 'lucide-react';
 
 const ChatWidget = ({ isDark }) => {
   const [isOpen, setIsOpen] = useState(false);
@@ -9,6 +9,17 @@ const ChatWidget = ({ isDark }) => {
   const [chatHistory, setChatHistory] = useState([
     { type: 'bot', text: 'Olá! 👋 Bem-vindo à Forpus Tech. Como posso ajudá-lo hoje?' }
   ]);
+
+  // Estimator conversational state
+  const [estimatorActive, setEstimatorActive] = useState(false);
+  const [estimatorStep, setEstimatorStep] = useState(0);
+  const [estimatorData, setEstimatorData] = useState({
+    projectType: '',
+    complexity: '',
+    urgency: '',
+    email: '',
+    description: '',
+  });
 
   // Base de conhecimento com respostas inteligentes
   const knowledgeBase = {
@@ -57,6 +68,7 @@ const ChatWidget = ({ isDark }) => {
     { question: '💻 Que tecnologias usam?', key: 'tecnologias' },
     { question: '🏢 Quem é a Forpus Tech?', key: 'experiencia' },
     { question: '📞 Como entrar em contato?', key: 'contato' },
+    { question: '🧮 Solicitar Orçamento', key: 'estimator' },
   ];
 
   // Função para encontrar resposta baseada em palavras-chave
@@ -80,20 +92,177 @@ const ChatWidget = ({ isDark }) => {
     e.preventDefault();
     if (!message.trim()) return;
 
-    const userMsg = message;
+    const userMsg = message.trim();
     setChatHistory(prev => [...prev, { type: 'user', text: userMsg }]);
     setShowFAQ(false);
     setMessage('');
 
-    // Simula digitação
+    // If estimator conversational flow is active, delegate
+    if (estimatorActive) {
+      setTimeout(() => handleEstimatorReply(userMsg), 400);
+      return;
+    }
+
+    // Simula digitação para respostas padrão
     setTimeout(() => {
       const botResponse = findResponse(userMsg);
       setChatHistory(prev => [...prev, { type: 'bot', text: botResponse }]);
     }, 800);
   };
 
+  const handleEstimatorReply = (userMsg) => {
+    const normalize = (s) => s.trim().toLowerCase();
+
+    const parseProjectType = (s) => {
+      const t = normalize(s);
+      if (t.includes('landing')) return 'Landing Page';
+      if (t.includes('site') || t.includes('website')) return 'Website';
+      if (t.includes('app') || t.includes('mobile')) return 'Mobile App';
+      if (t.includes('sistema') || t.includes('custom') || t.includes('personalizado')) return 'Custom System';
+      return s.charAt(0).toUpperCase() + s.slice(1);
+    };
+
+    const parseComplexity = (s) => {
+      const t = normalize(s);
+      if (t.includes('low') || t.includes('baixo') || t.includes('baixa')) return 'Low';
+      if (t.includes('high') || t.includes('alto') || t.includes('alta')) return 'High';
+      return 'Medium';
+    };
+
+    const parseUrgency = (s) => {
+      const t = normalize(s);
+      if (t.includes('rush') || t.includes('urg') || t.includes('urgente')) return 'Rush';
+      if (t.includes('accel') || t.includes('acel') || t.includes('rápido') || t.includes('rapido') || t.includes('acelerado')) return 'Accelerated';
+      return 'Normal';
+    };
+
+    if (estimatorStep === 1) {
+      const projectType = parseProjectType(userMsg);
+      setEstimatorData(d => ({ ...d, projectType }));
+      setEstimatorStep(2);
+      setChatHistory(prev => [...prev, { type: 'bot', text: 'Entendido. Qual o nível de complexidade? (Baixa / Média / Alta)' }]);
+      return;
+    }
+
+    if (estimatorStep === 2) {
+      const complexity = parseComplexity(userMsg);
+      setEstimatorData(d => ({ ...d, complexity }));
+      setEstimatorStep(3);
+      setChatHistory(prev => [...prev, { type: 'bot', text: 'Ótimo. Qual a urgência do projeto? (Normal / Acelerado / Urgente)' }]);
+      return;
+    }
+
+    if (estimatorStep === 3) {
+      const urgency = parseUrgency(userMsg);
+      setEstimatorData(d => ({ ...d, urgency }));
+      setEstimatorStep(4);
+      setChatHistory(prev => [...prev, { type: 'bot', text: 'Pode me passar um email para contato? (opcional - digite "pular" para omitir)' }]);
+      return;
+    }
+
+    if (estimatorStep === 4) {
+      const email = userMsg.trim().toLowerCase() === 'pular' ? '' : userMsg.trim();
+      setEstimatorData(d => ({ ...d, email }));
+      setEstimatorStep(5);
+      setChatHistory(prev => [...prev, { type: 'bot', text: 'Descreva brevemente o seu projeto (funcionalidades principais, público-alvo).' }]);
+      return;
+    }
+
+    if (estimatorStep === 5) {
+      const description = userMsg.trim();
+      const data = { ...estimatorData, description };
+      setEstimatorData(data);
+
+      // compute estimate
+      const basePrices = {
+        'Landing Page': 2000,
+        Website: 5000,
+        'Mobile App': 15000,
+        'Custom System': 10000,
+      };
+      const complexityMult = { Low: 0.8, Medium: 1, High: 1.6 };
+      const urgencyMult = { Normal: 1, Accelerated: 1.25, Rush: 1.6 };
+
+      const base = basePrices[data.projectType] ?? 5000;
+      const low = Math.round(base * (complexityMult[data.complexity] ?? 1) * (urgencyMult[data.urgency] ?? 1) * 0.9);
+      const high = Math.round(base * (complexityMult[data.complexity] ?? 1) * (urgencyMult[data.urgency] ?? 1) * 1.25);
+
+      const summary = `Estimativa rápida Forpus Tech\nTipo: ${data.projectType}\nComplexidade: ${data.complexity}\nUrgência: ${data.urgency}\nFaixa: R$ ${low.toLocaleString()} - R$ ${high.toLocaleString()}\nEmail: ${data.email || '—'}\nDescrição: ${data.description || '—'}`;
+
+      setChatHistory(prev => [...prev, { type: 'bot', text: 'Obrigado! Aqui está uma estimativa inicial:' }, { type: 'bot', text: summary }, { type: 'bot', text: 'Digite "enviar" para enviar via WhatsApp, "copiar" para copiar o resumo, ou "novo" para gerar outra estimativa.' }]);
+      setEstimatorStep(6);
+      return;
+    }
+
+    if (estimatorStep === 6) {
+      const cmd = userMsg.trim().toLowerCase();
+      if (cmd === 'enviar' || cmd === 'send') {
+        const data = estimatorData;
+        const basePrices = { 'Landing Page': 2000, Website: 5000, 'Mobile App': 15000, 'Custom System': 10000 };
+        const complexityMult = { Low: 0.8, Medium: 1, High: 1.6 };
+        const urgencyMult = { Normal: 1, Accelerated: 1.25, Rush: 1.6 };
+        const base = basePrices[data.projectType] ?? 5000;
+        const low = Math.round(base * (complexityMult[data.complexity] ?? 1) * (urgencyMult[data.urgency] ?? 1) * 0.9);
+        const high = Math.round(base * (complexityMult[data.complexity] ?? 1) * (urgencyMult[data.urgency] ?? 1) * 1.25);
+        const text = encodeURIComponent(`Olá Forpus Tech, gostaria de solicitar um orçamento.\n\nTipo: ${data.projectType}\nComplexidade: ${data.complexity}\nUrgência: ${data.urgency}\nFaixa: R$ ${low.toLocaleString()} - R$ ${high.toLocaleString()}\nEmail: ${data.email || '—'}\nDescrição: ${data.description || '—'}`);
+        window.open(`https://wa.me/558799163274?text=${text}`, '_blank');
+        setChatHistory(prev => [...prev, { type: 'bot', text: 'Abrindo WhatsApp para envio...' }]);
+        setEstimatorActive(false);
+        setEstimatorStep(0);
+        setEstimatorData({ projectType: '', complexity: '', urgency: '', email: '', description: '' });
+        return;
+      }
+
+      if (cmd === 'copiar' || cmd === 'copy') {
+        const data = estimatorData;
+        const basePrices = { 'Landing Page': 2000, Website: 5000, 'Mobile App': 15000, 'Custom System': 10000 };
+        const complexityMult = { Low: 0.8, Medium: 1, High: 1.6 };
+        const urgencyMult = { Normal: 1, Accelerated: 1.25, Rush: 1.6 };
+        const base = basePrices[data.projectType] ?? 5000;
+        const low = Math.round(base * (complexityMult[data.complexity] ?? 1) * (urgencyMult[data.urgency] ?? 1) * 0.9);
+        const high = Math.round(base * (complexityMult[data.complexity] ?? 1) * (urgencyMult[data.urgency] ?? 1) * 1.25);
+        const summary = `Estimativa rápida Forpus Tech\nTipo: ${data.projectType}\nComplexidade: ${data.complexity}\nUrgência: ${data.urgency}\nFaixa: R$ ${low.toLocaleString()} - R$ ${high.toLocaleString()}\nEmail: ${data.email || '—'}\nDescrição: ${data.description || '—'}`;
+        navigator.clipboard?.writeText(summary).then(() => {
+          setChatHistory(prev => [...prev, { type: 'bot', text: 'Resumo copiado para a área de transferência.' }]);
+        }).catch(() => {
+          setChatHistory(prev => [...prev, { type: 'bot', text: 'Não foi possível copiar automaticamente.' }]);
+        });
+        setEstimatorActive(false);
+        setEstimatorStep(0);
+        setEstimatorData({ projectType: '', complexity: '', urgency: '', email: '', description: '' });
+        return;
+      }
+
+      if (cmd === 'novo' || cmd === 'restart') {
+        setEstimatorActive(true);
+        setEstimatorStep(1);
+        setEstimatorData({ projectType: '', complexity: '', urgency: '', email: '', description: '' });
+        setChatHistory(prev => [...prev, { type: 'bot', text: 'Vamos iniciar um novo orçamento. Qual o tipo de projeto?' }]);
+        return;
+      }
+
+      setChatHistory(prev => [...prev, { type: 'bot', text: 'Comando não reconhecido. Digite "enviar", "copiar" ou "novo".' }]);
+      return;
+    }
+  };
+
   const handleFAQClick = (key) => {
     const faqItem = faqs.find(f => f.key === key);
+    if (!faqItem) return;
+
+    // Start estimator conversational flow
+    if (key === 'estimator') {
+      setShowFAQ(false);
+      setEstimatorActive(true);
+      setEstimatorStep(1);
+      setChatHistory(prev => [
+        ...prev,
+        { type: 'user', text: faqItem.question },
+        { type: 'bot', text: 'Ótimo — vamos gerar uma estimativa rápida. Primeiro: qual o tipo de projeto? (Landing Page / Website / App Mobile / Sistema Personalizado)' }
+      ]);
+      return;
+    }
+
     if (faqItem) {
       setChatHistory(prev => [
         ...prev,
